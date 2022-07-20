@@ -117,23 +117,11 @@ Or, for sanity check, you can use:
 
 Render the frame input (i.e., observed motion sequence).
 
-    python run.py \
-        --type movement \
-        --cfg configs/human_nerf/zju_mocap/387/adventure.yaml 
 
 Run free-viewpoint rendering on a particular frame (e.g., frame 128).
 
-    python run.py \
-        --type freeview \
-        --cfg configs/human_nerf/zju_mocap/387/adventure.yaml \
-        freeview.frame_idx 128
 
-
-Render the learned canonical appearance (T-pose).
-
-    python run.py \
-        --type tpose \
-        --cfg configs/human_nerf/zju_mocap/387/adventure.yaml 
+Render the learned canonical appearance.
 
 In addition, you can find the rendering scripts in `scripts/zju_mocap`.
 
