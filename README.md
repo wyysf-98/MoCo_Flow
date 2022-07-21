@@ -96,7 +96,7 @@ First, you should initialize the canonical NeRF model.
 
     python train.py -c configs/youtube_invisible_trap/init_nerf.yaml
 
-Second, for fast convergence, you can initialize the forward/backward NoF model.
+Second, for fast convergence, you can initialize the forward/backward NoF model separately. 
 
     python train.py -c configs/youtube_invisible_trap/init_nof.yaml
 

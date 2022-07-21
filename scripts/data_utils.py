@@ -267,7 +267,7 @@ def create_moco_flow_data(pkl_path, size, focal=2000, gender='neutral', vis=Fals
     json.dump(moco_dict, open(save_folder + '/val.json', 'w'), indent=4, cls=NumpyEncoder)
 
 
-def create_init_nerf_data(pkl_path, size, focal=2000, gender='neutral', num_images=120):
+def create_init_nerf_data(pkl_path, size, focal=2000, gender='neutral', num_images=120, canonical_pose="frame0"):
     vibe_output = joblib.load(open(pkl_path, 'rb'))
     save_folder = osp.dirname(pkl_path)
     print(f'create init nerf data: {pkl_path}')
@@ -276,7 +276,21 @@ def create_init_nerf_data(pkl_path, size, focal=2000, gender='neutral', num_imag
     H, W = size
     cam = vibe_output[1]['orig_cam'][0]
     cur_betas = vibe_output[1]['betas'][0]
-    cur_pose = vibe_output[1]['pose'][0]
+    if canonical_pose == 'frame0':
+        cur_pose = vibe_output[1]['pose'][0]
+        save_folder += '/init_nerf'
+    elif canonical_pose == 'xpose':
+        cur_pose = np.array([-np.pi,   0.,   0.,  0. ,  0. ,  0.5,  0. ,  0. , -0.5,  0. ,  0. ,  0. ,  0. ,  0. ,
+                            0. ,  0. ,  0. ,  0. ,  0. ,  0. ,  0. ,  0. ,  0. ,  0. ,  0. ,
+                            0. ,  0. ,  0. ,  0. ,  0. ,  0. ,  0. ,  0. ,  0. ,  0. ,  0. ,
+                            0. ,  0. ,  0. ,  0. ,  0. ,  0. ,  0. ,  0. ,  0. ,  0. ,  0. ,
+                            0. ,  0. ,  0. ,  0. ,  0. ,  0. ,  0. ,  0. ,  0. ,  0. ,  0. ,
+                            0. ,  0. ,  0. ,  0. ,  0. ,  0. ,  0. ,  0. ,  0. ,  0. ,  0. ,
+                            0. ,  0. ,  0. ])
+        save_folder += '/init_nerf_xpose'
+    else:
+        raise NotImplementedError(f"{canonical_pose} not support")
+
     cur_transl = np.array([cam[2], cam[3], 2*focal/(cam[0]*W)])
     smpl = SMPL(gender)
     verts = smpl.forward(torch.from_numpy(cur_pose).unsqueeze(dim=0).float(), \
@@ -306,14 +320,14 @@ def create_init_nerf_data(pkl_path, size, focal=2000, gender='neutral', num_imag
     vis_imgs = []
     
     render_poses = sample_on_sphere(num_images, np.sqrt(np.sum(cur_transl**2)))
-    for frame_id, camera_position in enumerate(render_poses):
+    for frame_id, camera_position in tqdm(enumerate(render_poses)):
         camera_pose = get_camera_pose(camera_position + cur_transl, cur_transl) 
 
         rendered_img, _mask = renderer.render(mesh, camera, camera_pose, \
             bkgd=255*np.ones((H, W, 4)), color_map=color_map)
         vis_imgs += [rendered_img]
-        os.makedirs(f'{save_folder}/init_nerf/images', exist_ok=True)
-        imageio.imwrite(f'{save_folder}/init_nerf/images/{frame_id:04d}.png', rendered_img)
+        os.makedirs(f'{save_folder}/images', exist_ok=True)
+        imageio.imwrite(f'{save_folder}/images/{frame_id:04d}.png', rendered_img)
 
         moco_dict['frames'] += [{
             'file_path': f'{frame_id:04d}.png',
@@ -325,5 +339,5 @@ def create_init_nerf_data(pkl_path, size, focal=2000, gender='neutral', num_imag
 
     imageio.mimwrite(f'{save_folder}/video_vis_init_nerf_data.mp4', vis_imgs, fps=30)
     
-    json.dump(moco_dict, open(save_folder + '/init_nerf/train.json', 'w'), indent=4, cls=NumpyEncoder)
-    json.dump(moco_dict, open(save_folder + '/init_nerf/val.json', 'w'), indent=4, cls=NumpyEncoder)
+    json.dump(moco_dict, open(f'{save_folder}/train.json', 'w'), indent=4, cls=NumpyEncoder)
+    json.dump(moco_dict, open(f'{save_folder}/val.json', 'w'), indent=4, cls=NumpyEncoder)

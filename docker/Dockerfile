@@ -29,16 +29,16 @@ RUN apt-get update && apt-get install -y \
 
 # Rebuild opengl 
 RUN git clone https://github.com/mmatl/pyopengl.git
-RUN pip install ./pyopengl
+RUN pip install ./pyopengl --user
 
 # For the convenience for users in China mainland
 RUN pip config set global.index-url https://mirrors.cloud.tencent.com/pypi/simple
 COPY requirements.txt requirements.txt 
-RUN pip install -r requirements.txt
+RUN pip install -r requirements.txt --user
 
 # Install KNN_CUDA
 COPY KNN_CUDA-0.2-py3-none-any.whl KNN_CUDA-0.2-py3-none-any.whl
-RUN pip install KNN_CUDA-0.2-py3-none-any.whl
+RUN pip install KNN_CUDA-0.2-py3-none-any.whl --user
 
 CMD ["python3"]
 

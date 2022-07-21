@@ -1,0 +1,153 @@
+save_dir: '../log/youtube_story' # set save dir
+exp_name: 'coarse2fine_xpose'
+
+# Dataset
+dataloader:
+  type: 'moco_flow'
+  root_dir: '../data/youtube/story'
+  imgs_dir: 'images'
+  size:
+    - 1080
+    - 1920
+  val_size:
+    - 108
+    - 192
+  aabb:
+    - [1.2, 1.2, 1.4] # AABB scale
+    - [0, 0, 0] # AABB offset
+  bkgd: 1.0 # customize backgound (support: float, image path)
+  # bkgd: '../data/youtube/story/background.png' # a trick to prevent inperfect matting
+  canonical_pose: "xpose"
+  interval: 1 
+  cache: True
+  batch_size: 1
+  workers: 4
+
+# Model
+model:
+  type: 'moco_flow'
+  pretrained_path: null # pre-trained .ckpt model path
+  pretrained_nerf: '../log/youtube_story/init_nerf/0623_224531/ckpts/epoch792_iter95000.pth' # pre-trained NeRF .ckpt model path
+  pretrained_nof: '../log/youtube_story/init_nof/0708_210043/ckpts/epoch1626_iter195000.pth'
+  # pretrained_nof: '../log/youtube_story/init_nof_thr_0_1/0709_133011/ckpts/epoch834_iter100000.pth'
+
+  coarse_to_fine: True
+
+  N_rand: 1024 # number of random rays per gradient step per GPU
+  N_sampled: 1000 # number of random points for NoF per gradient step per GPU
+  chunk: 32768 # number of random rays sampled per image, used in val mode
+  N_samples: 64 # number of coarse samples
+  N_importance: 128 # number of additional fine samples
+  use_disp: False # use disparity depth sampling
+  perturb: 1.0 # factor to perturb depth sampling points
+  noise_std: 0.0 # std dev of noise added to regularize sigma
+  nerf_activate_type: 'softplus' # ['relu', 'softplus']
+
+  nof_embedding_xyz:
+    type: 'Embedding'
+    in_channels: 3
+    N_freqs: 10
+    logscale: True
+  nof_embedding_ind: 
+    type: 'Embedding'
+    in_channels: 1
+    N_freqs: 16
+    logscale: True
+  fw_NoF:
+    type: 'NoF'
+    D: 8
+    W: 256
+    in_channels_xyz: 63 # 3+3*10*2
+    skips:
+      - 4
+    extra_feat_type: "ind"
+    extra_feat_dim: 33
+    use_quat: True # whteher to use quaternion based transform
+  bw_NoF:
+    type: 'NoF'
+    D: 8
+    W: 256
+    in_channels_xyz: 63 # 3+3*10*2
+    skips:
+      - 4
+    extra_feat_type: "ind"
+    extra_feat_dim: 33
+    use_quat: True # whteher to use quaternion based transform
+  nerf_embedding_xyz:
+    type: 'Embedding'
+    in_channels: 3
+    N_freqs: 10
+    logscale: True
+  nerf_embedding_dir: null
+  nerf_embedding_ind: 
+    type: 'Embedding'
+    in_channels: 1
+    N_freqs: 5
+    logscale: True
+  coarse_NeRF:
+    type: 'NeRF'
+    D: 8
+    W: 256
+    in_channels_xyz: 63
+    skips:
+      - 4
+    extra_feat_type: "ind"
+    extra_feat_dim: 11
+  fine_NeRF:
+    type: 'NeRF'
+    D: 8
+    W: 256
+    in_channels_xyz: 63
+    skips:
+      - 4
+    extra_feat_type: "ind"
+    extra_feat_dim: 11
+
+
+# Losses
+loss: 
+  chain_local: True # whether to use local chain nof
+  nof_local_weight: 0.2 # weight of NoF local chain loss
+  chain_global: True # whether to use global chain nof
+  nof_global_weight: 0.2 # weight of NoF global chain loss
+  img_loss:
+    type: 'MSE'
+    weight: 1
+  ## losses for init NoF model
+  nof_loss: 
+    type: 'L1'
+    weight: 10
+  msk_loss:
+    type: 'BCE'
+    weight: 10
+
+# Optimizer
+optimizer:
+  moco:
+    type: 'adam' # optimizer type
+    lr: 0.0001 # learning rate 
+    weight_decay: 0 # weight decay
+  nof:
+    type: 'adam' # optimizer type
+    lr: 0.001 # learning rate 
+    weight_decay: 0 # weight decay
+
+# Schduler
+scheduler:
+  type: 'steplr' # scheduler type : ['steplr', 'explr', 'cosine', 'poly']
+  decay_step: 
+    - 2200000
+  decay_gamma: 0.5
+  
+# Trainer
+trainer:
+  num_iters: 2210000 # total number of iterations for training
+  coarse2fine_start_iter: 10000
+  coarse2fine_end_iter: 2010000
+
+  val_every_n_step: 10000 # valid every n steps
+  vis_img_every_n_val: 1 # vis image results for every n validations
+  vis_mesh_video_every_n_val: 5 # extract mesh and render video for every n validations
+  save_every_n_step: 20000 # save ckpt every n steps
+
+  log_freq: 100 # frequence of log

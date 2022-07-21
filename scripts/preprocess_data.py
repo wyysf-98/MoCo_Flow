@@ -15,7 +15,7 @@ args.add_argument('--start_frame', default=0, type=int, help='clip start frame i
 args.add_argument('--end_frame', default=-1, type=int, help='clip end frame index.')
 args.add_argument('--interval', default=1, type=int, help='sampling interval of the video.')
 args.add_argument('--vibe_path', default='./VIBE', type=str, help='vibe code path for pose estimation.')
-args.add_argument('--grender', default='neutral', type=str, help='gender for smpl model.')
+args.add_argument('--gender', default='neutral', type=str, help='gender for smpl model.')
 
 args = args.parse_args()
 
@@ -58,10 +58,10 @@ def main(args):
     # convert VIBE ouput to json
     H, W = imageio.imread(args.output_folder + '/images_w_bkgd/0000.png').shape[:2]
     print('H: {}, W: {}'.format(H, W))
-    create_moco_flow_data(args.output_folder + '/vibe_output.pkl', size=(H, W), focal=2000, gender='m', vis=False)
+    create_moco_flow_data(args.output_folder + '/vibe_output.pkl', size=(H, W), focal=2000, gender=args.gender, vis=False)
 
     # create init nerf data
-    create_init_nerf_data(args.output_folder + '/vibe_output.pkl', size=(H, W), focal=2000, gender='m')
+    create_init_nerf_data(args.output_folder + '/vibe_output.pkl', size=(H, W), focal=2000, gender=args.gender)
 
 if __name__ == '__main__':
     main(args)

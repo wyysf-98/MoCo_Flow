@@ -1,0 +1,78 @@
+save_dir: '../log/youtube_story' # set save dir
+exp_name: 'init_nof'
+
+# Dataset
+dataloader:
+  type: 'nof'
+  root_dir: '../data/youtube/story'
+  canonical_pose: "frame0"
+  interval: 1 
+  cache: True
+  batch_size: 1
+  workers: 4
+
+# Model
+model:
+  type: 'nof'
+  pretrained_path: null # pre-trained .ckpt model path
+  pretrained_nof: null # pre-trained NoF .ckpt model path
+
+  N_sampled: 100000 # number of random points for NoF per gradient step per GPU
+
+  nof_embedding_xyz:
+    type: 'Embedding'
+    in_channels: 3
+    N_freqs: 0
+    logscale: True
+  nof_embedding_ind: 
+    type: 'Embedding'
+    in_channels: 1
+    N_freqs: 16
+    logscale: True
+  fw_NoF:
+    type: 'NoF'
+    D: 8
+    W: 256
+    in_channels_xyz: 63 # 3+3*10*2
+    skips:
+      - 4
+    extra_feat_type: "ind"
+    extra_feat_dim: 33
+    use_quat: True # whteher to use quaternion based transform
+  bw_NoF:
+    type: 'NoF'
+    D: 8
+    W: 256
+    in_channels_xyz: 63 # 3+3*10*2
+    skips:
+      - 4
+    extra_feat_type: "ind"
+    extra_feat_dim: 33
+    use_quat: True # whteher to use quaternion based transform
+
+
+# Losses
+loss: 
+  type: 'L1'
+
+# Optimizer
+optimizer:
+  type: 'adam' # optimizer type
+  lr: 0.001 # learning rate 
+  weight_decay: 0 # weight decay
+
+# Schduler
+scheduler:
+  type: 'steplr' # scheduler type : ['steplr', 'explr', 'cosine', 'poly']
+  decay_step: 
+    - 250000
+  decay_gamma: 0.5
+  
+# Trainer
+trainer:
+  num_iters: 500000 # total number of iterations for training
+
+  val_every_n_step: 5000 # valid every n steps
+  save_every_n_step: 20000 # save ckpt every n steps
+
+  log_freq: 50 # frequence of log

@@ -1,0 +1,94 @@
+save_dir: '../log/youtube_story' # set save dir
+exp_name: 'init_nerf_xpose'
+
+# Dataset
+dataloader:
+  type: 'moco_flow'
+  root_dir: '../data/youtube/story/init_nerf_xpose'
+  imgs_dir: 'images'
+  size:
+    - 1080
+    - 1920
+  val_size:
+    - 108
+    - 192
+  aabb:
+    - [1.2, 1.2, 1.2] # AABB scale
+    - [0, 0, 0] # AABB offset
+  bkgd: 1.0 # customize backgound (support: float, image path)
+  canonical_pose: null
+  interval: 1 
+  cache: True
+  batch_size: 1
+  workers: 4
+
+# Model
+model:
+  type: 'nerf'
+  pretrained_path: null
+
+  N_rand: 5120 # number of random rays per gradient step per GPU
+  chunk: 32768 # number of random rays sampled per image, used in val mode
+  N_samples: 64 # number of coarse samples
+  N_importance: 128 # number of additional fine samples
+  use_disp: False # use disparity depth sampling
+  perturb: 1.0 # factor to perturb depth sampling points
+  noise_std: 0.0 # std dev of noise added to regularize sigma
+  nerf_activate_type: 'softplus' # ['relu', 'softplus']
+
+  nerf_embedding_xyz:
+    type: 'Embedding'
+    in_channels: 3
+    N_freqs: 0
+    logscale: True
+  nerf_embedding_dir: 
+    type: 'Embedding'
+    in_channels: 3
+    N_freqs: 4
+    logscale: True
+  nerf_embedding_ind: null
+  coarse_NeRF:
+    type: 'NeRF'
+    D: 8
+    W: 256
+    in_channels_xyz: 63
+    skips:
+      - 4
+    extra_feat_type: "dir"
+    extra_feat_dim: 27
+  fine_NeRF:
+    type: 'NeRF'
+    D: 8
+    W: 256
+    in_channels_xyz: 63
+    skips:
+      - 4
+    extra_feat_type: "dir"
+    extra_feat_dim: 27
+# Loss
+loss: 
+  type: 'MSE'
+
+# Optimizer
+optimizer:
+  type: 'radam' # optimizer type
+  lr: 0.0005 # learning rate. if use DDP，modify  
+  weight_decay: 0 # weight decay
+
+# Schduler
+scheduler:
+  type: 'steplr' # scheduler type : ['steplr', 'explr', 'cosine', 'poly']
+  decay_step: 
+    - 100000
+  decay_gamma: 1.0
+  
+# Trainer
+trainer:
+  num_iters: 100000 # total number of iterations for training
+
+  val_every_n_step: 500 # valid every n steps
+  vis_img_every_n_val: 1 # vis image results for every n validations
+  vis_mesh_video_every_n_val: 5 # extract mesh and render video for every n validations
+  save_every_n_step: 5000 # save ckpt every n steps
+
+  log_freq: 50 # frequence of log
