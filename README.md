@@ -24,6 +24,7 @@ This is an official implementation. Any questions or discussions are welcomed!
 | Ours(MoCo-Flow)                                         | :heavy_check_mark: |            :x:           | :heavy_check_mark: |  Inverse+Forward  |
 
 * Our work is placed to *strict monocular*, which can be seen in [Monocular Dynamic View Synthesis A Reality Check](https://arxiv.org/pdf/2210.13445.pdf).
+
 ![Monocular](https://wyysf-98.github.io/MoCo_Flow/assets/images/spectrum.gif)
 
 
