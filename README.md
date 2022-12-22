@@ -23,7 +23,7 @@ This is an official implementation. Any questions or discussions are welcomed!
 | [ TAVA ]( https://arxiv.org/pdf/2206.08929.pdf )        | :heavy_check_mark: |    :heavy_check_mark:    | :heavy_check_mark: |      Forward      |
 | Ours(MoCo-Flow)                                         | :heavy_check_mark: |            :x:           | :heavy_check_mark: |  Inverse+Forward  |
 
-* Following the [Monocular Dynamic View Synthesis A Reality Check](https://arxiv.org/pdf/2210.13445.pdf). Our work is placed to *strict monocular*.
+* Our work is placed to *strict monocular*, which can be seen in [Monocular Dynamic View Synthesis A Reality Check](https://arxiv.org/pdf/2210.13445.pdf).
 ![Monocular](https://wyysf-98.github.io/MoCo_Flow/assets/images/spectrum.gif)
 
 
