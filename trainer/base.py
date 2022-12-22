@@ -102,6 +102,7 @@ class BaseTrainer(object):
     
         if self.dist:
             dist.init_process_group(backend='nccl')            
+            self.world_size = dist.get_world_size()
 
     @master_process
     def init_logger(self, config):
@@ -142,7 +143,7 @@ class BaseTrainer(object):
         eps = 1e-8
         if scheduler_config['type'] == 'steplr':
             scheduler = lr_scheduler.MultiStepLR(
-                optimizer, milestones=scheduler_config['decay_step'], gamma=scheduler_config['decay_gamma'])
+                optimizer, milestones=[int(step // self.world_size) for step in scheduler_config['decay_step']], gamma=scheduler_config['decay_gamma'])
         elif scheduler_config['type'] == 'explr':
             scheduler = lr_scheduler.ExponentialLR(
                 optimizer, scheduler_config['lr_decay'])
@@ -179,7 +180,7 @@ class BaseTrainer(object):
                 current_lr = get_learning_rate(self.optimizers[key])
                 self.logger.put_line('[Epoch/Step : {}/{}]: <optimizer {}> learning rate is: {}'.format(
                     self.clock.epoch, self.clock.step, key, current_lr))
-                self.tb.add_scalar('learning_rate/{}_lr'.format(key), current_lr, self.clock.epoch)
+                self.tb.add_scalar('learning_rate/{}_lr'.format(key), current_lr, self.clock.step)
 
             self.schedulers[key].step()
 

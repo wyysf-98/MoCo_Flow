@@ -11,6 +11,7 @@ import imageio
 import trimesh
 import pyrender
 import joblib
+import pickle
 import colorsys
 import numpy as np
 from tqdm import tqdm
@@ -94,9 +95,6 @@ class NumpyEncoder(json.JSONEncoder):
 def clip_video(video_path, start_frame, end_frame, interval):
     vid = imageio.get_reader(video_path)
     frames = []
-    # imageio.imwrite('start.png', vid.get_data(start_frame))
-    # imageio.imwrite('end.png', vid.get_data(end_frame))
-    # exit()
     for i in tqdm(range(start_frame, end_frame, interval)):
         frames.append(vid.get_data(i))
     return frames
@@ -116,12 +114,12 @@ def find_max_region(msk):
     return msk
 
 
-def matting(video_path, output_path, thres=10):
+def matting(video_path, output_path, thres=196):
     '''
     use matting method from: https://github.com/PeterL1n/RobustVideoMatting/blob/master/documentation/inference.md
     '''
-    model = torch.hub.load("PeterL1n/RobustVideoMatting", "resnet50") # or "mobilenetv3"
-    convert_video = torch.hub.load("PeterL1n/RobustVideoMatting", "converter")
+    model = torch.hub.load("PeterL1n/RobustVideoMatting", "resnet50", skip_validation=True) # or "mobilenetv3"
+    convert_video = torch.hub.load("PeterL1n/RobustVideoMatting", "converter", skip_validation=True)
     convert_video(
                 model,                                     # The loaded model, can be on any device (cpu or cuda).
                 input_source=video_path,                   # A video file or an image sequence directory.
@@ -155,13 +153,13 @@ def generate_background_image(images_path, masks_path, save_path):
 
     bkgd_imgs = []
     for i in range(num_images):
-        img = imageio.imread(osp.join(images_path, f'{i:04d}.png'))
-        msk = imageio.imread(osp.join(masks_path, f'{i:04d}.png'))
-        bkgd = img * (1 - msk[:, :, np.newaxis] / 255)
+        img = imageio.imread(osp.join(images_path, f'{i:04d}.png')) / 255.
+        msk = imageio.imread(osp.join(masks_path, f'{i:04d}.png')) / 255.
+        bkgd = img * (1 - msk[:, :, np.newaxis])
         bkgd_imgs += [bkgd]
 
     bkgd_imgs = np.array(bkgd_imgs)
-    bkgd_img = np.sort(bkgd_imgs, axis=0)[int(num_images*0.9)]
+    bkgd_img = np.sort(bkgd_imgs, axis=0)[int(num_images*0.8)]
     imageio.imwrite(save_path, bkgd_img)
 
 
@@ -202,14 +200,15 @@ def get_camera_pose(camera_position, obj_potision):
     return cameraPose
 
 
-def create_moco_flow_data(pkl_path, size, focal=2000, gender='neutral', vis=False):
+def create_moco_flow_data(pkl_path, size, focal=2000, c=None, gender='neutral', vis=False):
     vibe_output = joblib.load(open(pkl_path, 'rb'))
     save_folder = osp.dirname(pkl_path)
     print(f'create moco flow data: {pkl_path}')
     assert len(vibe_output) == 1
 
     H, W = size
-    cams = vibe_output[1]['orig_cam']
+    cams = vibe_output[1]['orig_cam'] if 'orig_cam' in vibe_output[1].keys() else None
+    transls = vibe_output[1]['transls'] if 'transls' in vibe_output[1].keys() else None
     betas = vibe_output[1]['betas']
     poses = vibe_output[1]['pose']
     frame_ids = vibe_output[1]['frame_ids']
@@ -218,7 +217,7 @@ def create_moco_flow_data(pkl_path, size, focal=2000, gender='neutral', vis=Fals
         'image_height': H,
         'image_width': W,
         'camera_focal': focal,
-        'camera_c': np.array([W / 2, H / 2]),
+        'camera_c': np.array([W / 2, H / 2] if c is None else c),
         'D': np.zeros((5,)),
         'frames': []
         }
@@ -228,18 +227,22 @@ def create_moco_flow_data(pkl_path, size, focal=2000, gender='neutral', vis=Fals
         camera = pyrender.camera.IntrinsicsCamera(
                 fx=focal,
                 fy=focal,
-                cx=W/2,
-                cy=H/2,
+                cx=W/2 if c is None else c[0],
+                cy=H/2 if c is None else c[1],
             )
         smpl = SMPL(gender)
         vis_imgs = []
 
     for i in tqdm(range(len(frame_ids))):
         frame_id = frame_ids[i]
-        cam = cams[frame_id]
         cur_pose = poses[frame_id]
         cur_betas = betas[frame_id]
-        cur_transl = np.array([cam[2], cam[3], 2*focal/(cam[0]*W)])
+        if cams is not None:
+            cam = cams[frame_id]
+            cur_transl = np.array([cam[2], cam[3], 2*focal/(cam[0]*W)])
+        else:
+            assert transls is not None
+            cur_transl = transls[frame_id]
         camera_pose = np.diag(np.array([1, -1, -1, 1], dtype=np.float32))
         moco_dict['frames'] += [{
             'file_path': f'{frame_id:04d}.png',
@@ -253,11 +256,11 @@ def create_moco_flow_data(pkl_path, size, focal=2000, gender='neutral', vis=Fals
             verts = smpl.forward(torch.from_numpy(cur_pose).unsqueeze(dim=0).float(), \
                                            torch.from_numpy(cur_betas).unsqueeze(dim=0).float())[0]
             mesh = trimesh.Trimesh(verts + cur_transl, smpl.faces)
-            rendered_img, _mask = renderer.render(mesh, camera, camera_pose, \
+            rendered_img, _mask = renderer.render(mesh, camera, camera_pose,
                 bkgd=imageio.imread(f'{save_folder}/images/{frame_id:04d}.png'), color=(0.5, 0.8, 1.0))
-            vis_imgs += [rendered_img]
             # os.makedirs(f'{save_folder}/vis', exist_ok=True)
             # imageio.imwrite(f'{save_folder}/vis/{frame_id:04d}.png', rendered_img)
+            vis_imgs += [rendered_img]
     
     if vis:
         imageio.mimwrite(f'{save_folder}/video_vis_moco_flow_data.mp4', vis_imgs, fps=30)
@@ -267,31 +270,21 @@ def create_moco_flow_data(pkl_path, size, focal=2000, gender='neutral', vis=Fals
     json.dump(moco_dict, open(save_folder + '/val.json', 'w'), indent=4, cls=NumpyEncoder)
 
 
-def create_init_nerf_data(pkl_path, size, focal=2000, gender='neutral', num_images=120, canonical_pose="frame0"):
+def create_init_nerf_data(pkl_path, size, focal=2000, c=None, gender='neutral', num_images=120):
     vibe_output = joblib.load(open(pkl_path, 'rb'))
     save_folder = osp.dirname(pkl_path)
     print(f'create init nerf data: {pkl_path}')
     assert len(vibe_output) == 1
 
     H, W = size
-    cam = vibe_output[1]['orig_cam'][0]
     cur_betas = vibe_output[1]['betas'][0]
-    if canonical_pose == 'frame0':
-        cur_pose = vibe_output[1]['pose'][0]
-        save_folder += '/init_nerf'
-    elif canonical_pose == 'xpose':
-        cur_pose = np.array([-np.pi,   0.,   0.,  0. ,  0. ,  0.5,  0. ,  0. , -0.5,  0. ,  0. ,  0. ,  0. ,  0. ,
-                            0. ,  0. ,  0. ,  0. ,  0. ,  0. ,  0. ,  0. ,  0. ,  0. ,  0. ,
-                            0. ,  0. ,  0. ,  0. ,  0. ,  0. ,  0. ,  0. ,  0. ,  0. ,  0. ,
-                            0. ,  0. ,  0. ,  0. ,  0. ,  0. ,  0. ,  0. ,  0. ,  0. ,  0. ,
-                            0. ,  0. ,  0. ,  0. ,  0. ,  0. ,  0. ,  0. ,  0. ,  0. ,  0. ,
-                            0. ,  0. ,  0. ,  0. ,  0. ,  0. ,  0. ,  0. ,  0. ,  0. ,  0. ,
-                            0. ,  0. ,  0. ])
-        save_folder += '/init_nerf_xpose'
+    cur_pose = vibe_output[1]['pose'][0]
+    if 'orig_cam' in vibe_output[1].keys():
+        cam = vibe_output[1]['orig_cam'][0]
+        cur_transl = np.array([cam[2], cam[3], 2*focal/(cam[0]*W)])
     else:
-        raise NotImplementedError(f"{canonical_pose} not support")
-
-    cur_transl = np.array([cam[2], cam[3], 2*focal/(cam[0]*W)])
+        assert 'transls' in vibe_output[1].keys()
+        cur_transl = vibe_output[1]['transls'][0] 
     smpl = SMPL(gender)
     verts = smpl.forward(torch.from_numpy(cur_pose).unsqueeze(dim=0).float(), \
                                     torch.from_numpy(cur_betas).unsqueeze(dim=0).float())[0]
@@ -306,7 +299,7 @@ def create_init_nerf_data(pkl_path, size, focal=2000, gender='neutral', num_imag
         'image_height': H,
         'image_width': W,
         'camera_focal': focal,
-        'camera_c': np.array([W / 2, H / 2]),
+        'camera_c': np.array([W / 2, H / 2] if c is None else c),
         'D': np.zeros((5,)),
         'frames': []
         }
@@ -314,20 +307,20 @@ def create_init_nerf_data(pkl_path, size, focal=2000, gender='neutral', num_imag
     camera = pyrender.camera.IntrinsicsCamera(
             fx=focal,
             fy=focal,
-            cx=W/2,
-            cy=H/2,
+            cx=W/2 if c is None else c[0],
+            cy=H/2 if c is None else c[1],
         )
     vis_imgs = []
     
     render_poses = sample_on_sphere(num_images, np.sqrt(np.sum(cur_transl**2)))
-    for frame_id, camera_position in tqdm(enumerate(render_poses)):
+    for frame_id, camera_position in enumerate(render_poses):
         camera_pose = get_camera_pose(camera_position + cur_transl, cur_transl) 
 
         rendered_img, _mask = renderer.render(mesh, camera, camera_pose, \
             bkgd=255*np.ones((H, W, 4)), color_map=color_map)
         vis_imgs += [rendered_img]
-        os.makedirs(f'{save_folder}/images', exist_ok=True)
-        imageio.imwrite(f'{save_folder}/images/{frame_id:04d}.png', rendered_img)
+        os.makedirs(f'{save_folder}/init_nerf/images', exist_ok=True)
+        imageio.imwrite(f'{save_folder}/init_nerf/images/{frame_id:04d}.png', rendered_img)
 
         moco_dict['frames'] += [{
             'file_path': f'{frame_id:04d}.png',
@@ -339,5 +332,14 @@ def create_init_nerf_data(pkl_path, size, focal=2000, gender='neutral', num_imag
 
     imageio.mimwrite(f'{save_folder}/video_vis_init_nerf_data.mp4', vis_imgs, fps=30)
     
-    json.dump(moco_dict, open(f'{save_folder}/train.json', 'w'), indent=4, cls=NumpyEncoder)
-    json.dump(moco_dict, open(f'{save_folder}/val.json', 'w'), indent=4, cls=NumpyEncoder)
+    json.dump(moco_dict, open(save_folder + '/init_nerf/train.json', 'w'), indent=4, cls=NumpyEncoder)
+    json.dump(moco_dict, open(save_folder + '/init_nerf/val.json', 'w'), indent=4, cls=NumpyEncoder)
+
+def load_pickle_file(pkl_path):
+    with open(pkl_path, 'rb') as f:
+        data = pickle.load(f, encoding='latin1')
+    return data
+
+def write_pickle_file(pkl_path, data_dict):
+    with open(pkl_path, 'wb') as fp:
+        pickle.dump(data_dict, fp, protocol=2)

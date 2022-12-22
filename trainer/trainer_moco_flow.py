@@ -302,7 +302,7 @@ class MoCoFlowTrainer(BaseTrainer):
                 self.nerf_embeddings[0].weights = [1] * self.config['model']['nerf_embedding_xyz']['N_freqs']
                 self.nof_embeddings[0].weights = [1] * self.config['model']['nof_embedding_xyz']['N_freqs']
 
-    def _shared_step(self, idx, rays, background, rgbs, nof_data):
+    def _shared_step(self, idx, rays, background, rgbs, nof_data, only_msk_loss=False):
         if self.config['loss']['chain_global']: # if chain global, random choose a frame
             chain_idx = np.random.randint(self.num_frames) * 2 / self.num_frames - 1.0
             rays = torch.cat([rays, 
@@ -327,19 +327,23 @@ class MoCoFlowTrainer(BaseTrainer):
             
         if nof_data is not None: # train NoF model
             inside_pts, outside_pts = nof_data
-            inside_query_pts, inside_cano_pts = inside_pts[:, :3], inside_pts[:, 3:]
-            inside_query_pts, inside_cano_pts = inside_query_pts.to(self.device).float(), inside_cano_pts.to(self.device).float()
-            
-            # for points which are near surface
-            inside_query_pts_bw = self.forward_nof(inside_query_pts, idx, 'bw_NoF')
-            self.losses['nof_bw'] = self.criterion_nof(inside_query_pts_bw, inside_cano_pts) * self.config['loss']['nof_loss']['weight']
-            if self.config['loss']['chain_local'] or self.config['loss']['chain_global']:
-                nof_fw_inside_pts = self.forward_nof(inside_cano_pts, idx, 'fw_NoF')
-                self.losses['nof_fw'] = self.criterion_nof(nof_fw_inside_pts, inside_query_pts) * self.config['loss']['nof_loss']['weight']
-            
+            if not only_msk_loss:
+                inside_query_pts, inside_cano_pts = inside_pts[:, :3], inside_pts[:, 3:]
+                inside_query_pts, inside_cano_pts = inside_query_pts.to(self.device).float(), inside_cano_pts.to(self.device).float()
+                
+                # for points which are near surface
+                inside_query_pts_bw = self.forward_nof(inside_query_pts, idx, 'bw_NoF')
+                self.losses['nof_bw'] = self.criterion_nof(inside_query_pts_bw, inside_cano_pts) * self.config['loss']['nof_loss']['weight']
+                if self.config['loss']['chain_local'] or self.config['loss']['chain_global']:
+                    nof_fw_inside_pts = self.forward_nof(inside_cano_pts, idx, 'fw_NoF')
+                    self.losses['nof_fw'] = self.criterion_nof(nof_fw_inside_pts, inside_query_pts) * self.config['loss']['nof_loss']['weight']
+            else:
+                for key in list(self.losses.keys()):
+                    if key in ['nof_bw', 'nof_fw']:
+                        del self.losses[key]
+                    torch.cuda.empty_cache()
+
             if self.config['loss']['msk_loss']['weight'] > 0:
-                # # only train alphas mask when fix nerf
-                # if self.clock.step < self.config['trainer']['fix_nerf_end_iter']:
                 # for outside points
                 outside_query_pts, outside_cano_pts = outside_pts[:, :3], outside_pts[:, 3:]
                 outside_query_pts, outside_cano_pts = outside_query_pts.to(self.device).float(), outside_cano_pts.to(self.device).float()
@@ -410,19 +414,33 @@ class MoCoFlowTrainer(BaseTrainer):
         sampled_rays, sampled_rgbs, sampled_background = rays[sel_inds], rgbs[sel_inds], background[sel_inds]
         sampled_rgbs = sampled_rgbs.to(self.device)
 
-        # train NoF before coarse2fine stage
+        # train NoF data
         if self.clock.step < self.config['trainer']['coarse2fine_start_iter']:
             nof_data = self.train_dataset.get_frame_correspondence(idx.squeeze(), \
                                                                    num_sampled=self.config['model']['N_sampled'], \
                                                                    device=self.device)
-        else:
-            nof_data = None
+            only_msk_loss = False
+        elif self.clock.step >= self.config['trainer']['coarse2fine_start_iter'] and self.clock.step < self.config['trainer']['coarse2fine_end_iter']:
+            if (self.clock.step // 1000) % 10 == 0:
+                nof_data = self.train_dataset.get_frame_correspondence(idx.squeeze(), \
+                                                                    num_sampled=self.config['model']['N_sampled'], \
+                                                                    device=self.device)
+                only_msk_loss = True
+            else:
+                nof_data = None
+                only_msk_loss = False
+        elif self.clock.step >= self.config['trainer']['coarse2fine_end_iter']:
+            nof_data = self.train_dataset.get_frame_correspondence(idx.squeeze(), \
+                                                                   num_sampled=self.config['model']['N_sampled'], \
+                                                                   device=self.device)
+            only_msk_loss = True
         
         results = self._shared_step(idx, 
                                     sampled_rays, 
                                     sampled_background, 
                                     sampled_rgbs, 
-                                    nof_data
+                                    nof_data,
+                                    only_msk_loss=only_msk_loss
                                     )
 
         with torch.no_grad():

@@ -17,13 +17,12 @@ from utils.smpl.smpl_model import SMPL
 from utils.vis_utils import create_spheric_poses, write_ply, write_ply_rgb
 
 class MoCoFlowDataset(Dataset):
-    def __init__(self, root_dir, imgs_dir, size, aabb, bkgd, canonical_pose, interval=1, cache=True, mode='train'):
+    def __init__(self, root_dir, imgs_dir, size, aabb, bkgd, interval=1, cache=True, mode='train'):
         self.root_dir = root_dir
         self.imgs_dir = imgs_dir
         self.size = size
         self.aabb = np.array(aabb)
         self.bkgd = bkgd
-        self.canonical_pose = canonical_pose
         self.interval = interval
         self.cache = cache
         self.mode = mode
@@ -42,7 +41,8 @@ class MoCoFlowDataset(Dataset):
         if isinstance(self.bkgd, float):
             self.bkgd_img = self.bkgd*torch.ones((3, *self.size))
         elif isinstance(self.bkgd, str):
-            self.bkgd_img = self.transform(Image.open(self.bkgd))
+            if self.bkgd != 'rand':
+                self.bkgd_img = self.transform(Image.open(self.bkgd))
         else:
             raise ValueError('background must be float or image path, current is: %s'%self.bkgd)
 
@@ -86,25 +86,14 @@ class MoCoFlowDataset(Dataset):
 
     def get_frame_correspondence(self, src_frame, tgt_frame=0, num_sampled=10000, thickness=0.2, device=torch.device('cpu')):
         self.smpl_gpu.to(device)
-
         src_frame_info = self.meta['frames'][src_frame]
+        tgt_frame_info = self.meta['frames'][tgt_frame]
+
         src_pose = torch.from_numpy(np.array(src_frame_info['pose'])).unsqueeze(0).float().to(device)
         src_betas = torch.from_numpy(np.array(src_frame_info['betas'])).unsqueeze(0).float().to(device)
-        tgt_frame_info = self.meta['frames'][tgt_frame]
+        tgt_pose = torch.from_numpy(np.array(tgt_frame_info['pose'])).unsqueeze(0).float().to(device)
         tgt_betas = torch.from_numpy(np.array(tgt_frame_info['betas'])).unsqueeze(0).float().to(device)
-        if self.canonical_pose == 'frame0':
-            tgt_pose = torch.from_numpy(np.array(tgt_frame_info['pose'])).unsqueeze(0).float().to(device)
-        elif self.canonical_pose == 'xpose':
-            tgt_pose = torch.from_numpy(np.array([-np.pi,   0.,   0.,  0. ,  0. ,  0.5,  0. ,  0. , -0.5,  0. ,  0. ,  0. ,  0. ,  0. ,
-                                                0. ,  0. ,  0. ,  0. ,  0. ,  0. ,  0. ,  0. ,  0. ,  0. ,  0. ,
-                                                0. ,  0. ,  0. ,  0. ,  0. ,  0. ,  0. ,  0. ,  0. ,  0. ,  0. ,
-                                                0. ,  0. ,  0. ,  0. ,  0. ,  0. ,  0. ,  0. ,  0. ,  0. ,  0. ,
-                                                0. ,  0. ,  0. ,  0. ,  0. ,  0. ,  0. ,  0. ,  0. ,  0. ,  0. ,
-                                                0. ,  0. ,  0. ,  0. ,  0. ,  0. ,  0. ,  0. ,  0. ,  0. ,  0. ,
-                                                0. ,  0. ,  0. ])).unsqueeze(0).float().to(device)
-        else:
-            raise ValueError('canonical_pose must be frame0 or xpose, current is: %s'%self.canonical_pose)
-            
+
         # source pose -> t-pose
         trans = self.smpl_gpu.get_vertex_transformation(src_pose, src_betas)[0].inverse() # 7877, 4, 4. in smpl space
         # t-pose -> target pose
@@ -179,9 +168,16 @@ class MoCoFlowDataset(Dataset):
         img = self.transform(Image.open(img_path)) # (3|4, H, W)
         if img.shape[0] == 4:
             # print('image with alpha channel, use custimized background')
+            if self.bkgd == 'rand':
+                if self.mode == 'val':
+                    self.bkgd_img = torch.ones((3, *self.size))
+                else:
+                    self.bkgd_img = torch.rand(3, 1, 1).repeat(1, *self.size)
             img = img[:3, ...] * img[-1:, ...] + self.bkgd_img * (1 - img[-1:, ...])
         sample['rgbs'] = img.view(3, -1).permute(1, 0) # (H*W, 3) RGB
         sample['background'] = self.bkgd_img.view(3, -1).permute(1, 0) # (H*W, 3) RGB
+
+        # print(img.shape)
         # torchvision.utils.save_image(img, 'debug.png')
         # exit()
 

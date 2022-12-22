@@ -28,7 +28,7 @@ class NoFTrainer(BaseTrainer):
                                        num_workers=data_config['workers'],
                                        sampler=self.train_sampler,
                                        shuffle=False,
-                                       pin_memory=False)
+                                       pin_memory=True)
         self.num_frames = self.train_dataset.num_frames
 
         self.val_dataset = get_dataset(data_config, 'val')
@@ -36,7 +36,7 @@ class NoFTrainer(BaseTrainer):
                                      batch_size=1,
                                      num_workers=data_config['workers'],
                                      shuffle=False,
-                                     pin_memory=False)
+                                     pin_memory=True)
 
     def load_pretrained_model(self, model, model_name, pretrained_path):
         try:
@@ -114,13 +114,15 @@ class NoFTrainer(BaseTrainer):
 
     def _shared_step(self, idx, nof_data):
         inside_pts, outside_pts = nof_data
-        inside_query_pts, inside_cano_pts = inside_pts[:, :3], inside_pts[:, 3:]
-        inside_query_pts, inside_cano_pts = inside_query_pts.to(self.device).float(), inside_cano_pts.to(self.device).float()
+        pts = torch.cat([inside_pts, outside_pts], dim = 0)
+
+        query_pts, cano_pts = pts[:, :3], pts[:, 3:]
+        query_pts, cano_pts = query_pts.to(self.device).float(), cano_pts.to(self.device).float()
         
-        inside_pts_bw = self.forward(inside_query_pts, idx, 'bw_NoF')
-        self.losses['nof_bw'] = self.criterion_nof(inside_pts_bw, inside_cano_pts)
-        inside_pts_fw = self.forward(inside_cano_pts, idx, 'fw_NoF')
-        self.losses['nof_fw'] = self.criterion_nof(inside_pts_fw, inside_query_pts)
+        query_pts_bw = self.forward(query_pts, idx, 'bw_NoF')
+        self.losses['nof_bw'] = self.criterion_nof(query_pts_bw, cano_pts)
+        nof_fw_pts = self.forward(cano_pts, idx, 'fw_NoF')
+        self.losses['nof_fw'] = self.criterion_nof(nof_fw_pts, query_pts)
 
     def train_step(self, data):
         nof_data = self.train_dataset.get_frame_correspondence(data['idx'].squeeze(), \

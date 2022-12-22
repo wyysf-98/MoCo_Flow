@@ -197,7 +197,7 @@ class NeRFTrainer(BaseTrainer):
         return img_ori, img_pred, depth_ori, depth_pred
 
     @ torch.no_grad()
-    def visualize_mesh(self, N_grid=256, sigma_threshold=10, chunk=10000, save_path=None):
+    def visualize_mesh(self, N_grid=256, sigma_threshold=10, chunk=10000, save_path=None, save_tb=False):
         x_range = [-1.5, 1.5]
         y_range = [-1.5, 1.5]
         z_range = [-1.5, 1.5]
@@ -254,7 +254,9 @@ class NeRFTrainer(BaseTrainer):
             save_path = osp.join(
                 self.log_dir, 'mesh_epoch_{}_step_{}.obj'.format(self.clock.epoch, self.clock.step))
         mcubes.export_obj(vertices, triangles, save_path)
-        self.tb.add_mesh('mesh', torch.from_numpy(vertices).unsqueeze(dim=0), global_step=self.clock.step)
+
+        if save_tb and self.is_master:
+            self.tb.add_mesh('mesh', torch.from_numpy(vertices).unsqueeze(dim=0), global_step=self.clock.step)
 
     @ torch.no_grad()
     def visualize_frame(self, frame_idx, save_path=None, save_tb=False):
@@ -284,7 +286,7 @@ class NeRFTrainer(BaseTrainer):
         stack = torch.cat([img_gt, img_pred, depth_pred, novel_img_pred, novel_depth_pred], dim=-1) # (3, H, W*5)
         vutils.save_image(stack, img_save_path)
 
-        if save_tb:
+        if save_tb and self.is_master:
             self.tb.add_image('frame_%s'%frame_idx, stack, global_step=self.clock.step)
 
         return stack
@@ -321,10 +323,11 @@ class NeRFTrainer(BaseTrainer):
     def visualize_batch(self, save_path=None):
         n_val = self.clock.step // self.config['trainer']['val_every_n_step']
 
-        if n_val % self.config['trainer']['vis_img_every_n_val'] == 0:
-            frame_idx = np.random.randint(0, self.num_frames)
-            self.visualize_frame(frame_idx, save_tb=True if self.is_master else False)
+        if self.is_master: # only vis master process
+            if n_val % self.config['trainer']['vis_img_every_n_val'] == 0:
+                frame_idx = np.random.randint(0, self.num_frames)
+                self.visualize_frame(frame_idx, save_tb=True if self.is_master else False)
 
-        if n_val % self.config['trainer']['vis_mesh_video_every_n_val'] == 0:
-            self.visualize_mesh()
-            self.visualize_spherical_poses()
+            if n_val % self.config['trainer']['vis_mesh_video_every_n_val'] == 0:
+                self.visualize_mesh(save_tb=True if self.is_master else False)
+                self.visualize_spherical_poses()

@@ -17,9 +17,8 @@ from utils.smpl.smpl_model import SMPL
 from utils.vis_utils import create_spheric_poses, write_ply, write_ply_rgb
 
 class NoFDataset(Dataset):
-    def __init__(self, root_dir, canonical_pose, interval=1, cache=True, mode='train'):
+    def __init__(self, root_dir, interval=1, cache=True, mode='train'):
         self.root_dir = root_dir
-        self.canonical_pose = canonical_pose
         self.interval = interval
         self.cache = cache
         self.mode = mode
@@ -46,24 +45,13 @@ class NoFDataset(Dataset):
 
     def get_frame_correspondence(self, src_frame, tgt_frame=0, num_sampled=10000, thickness=0.2, device=torch.device('cpu')):
         self.smpl_gpu.to(device)
-
         src_frame_info = self.meta['frames'][src_frame]
+        tgt_frame_info = self.meta['frames'][tgt_frame]
+
         src_pose = torch.from_numpy(np.array(src_frame_info['pose'])).unsqueeze(0).float().to(device)
         src_betas = torch.from_numpy(np.array(src_frame_info['betas'])).unsqueeze(0).float().to(device)
-        tgt_frame_info = self.meta['frames'][tgt_frame]
+        tgt_pose = torch.from_numpy(np.array(tgt_frame_info['pose'])).unsqueeze(0).float().to(device)
         tgt_betas = torch.from_numpy(np.array(tgt_frame_info['betas'])).unsqueeze(0).float().to(device)
-        if self.canonical_pose == 'frame0':
-            tgt_pose = torch.from_numpy(np.array(tgt_frame_info['pose'])).unsqueeze(0).float().to(device)
-        elif self.canonical_pose == 'xpose':
-            tgt_pose = torch.from_numpy(np.array([-np.pi,   0.,   0.,  0. ,  0. ,  0.5,  0. ,  0. , -0.5,  0. ,  0. ,  0. ,  0. ,  0. ,
-                                                0. ,  0. ,  0. ,  0. ,  0. ,  0. ,  0. ,  0. ,  0. ,  0. ,  0. ,
-                                                0. ,  0. ,  0. ,  0. ,  0. ,  0. ,  0. ,  0. ,  0. ,  0. ,  0. ,
-                                                0. ,  0. ,  0. ,  0. ,  0. ,  0. ,  0. ,  0. ,  0. ,  0. ,  0. ,
-                                                0. ,  0. ,  0. ,  0. ,  0. ,  0. ,  0. ,  0. ,  0. ,  0. ,  0. ,
-                                                0. ,  0. ,  0. ,  0. ,  0. ,  0. ,  0. ,  0. ,  0. ,  0. ,  0. ,
-                                                0. ,  0. ,  0. ])).unsqueeze(0).float().to(device)
-        else:
-            raise ValueError('canonical_pose must be frame0 or xpose, current is: %s'%self.canonical_pose)
 
         # source pose -> t-pose
         trans = self.smpl_gpu.get_vertex_transformation(src_pose, src_betas)[0].inverse() # 7877, 4, 4. in smpl space

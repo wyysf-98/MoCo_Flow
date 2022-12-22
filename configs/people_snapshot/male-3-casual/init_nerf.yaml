@@ -1,24 +1,21 @@
-save_dir: '../log/youtube_invisible_trap' # set save dir
+save_dir: '../log/people_snapshot/male-3-casual' # set save dir
 exp_name: 'init_nerf'
 
 # Dataset
 dataloader:
   type: 'moco_flow'
-  root_dir: '../data/youtube/invisible_trap/init_nerf'
+  root_dir: '../data/people_snapshot/male-3-casual/init_nerf'
   imgs_dir: 'images'
   size:
-    # - 1080
-    # - 1920
-    - 540
-    - 960
+    - 1080
+    - 1080
   val_size:
-    - 108
-    - 192
+    - 216
+    - 216
   aabb:
     - [1.2, 1.2, 1.2] # AABB scale
     - [0, 0, 0] # AABB offset
   bkgd: 1.0 # customize backgound (support: float, image path)
-  canonical_pose: null
   interval: 1 
   cache: True
   batch_size: 1
@@ -74,7 +71,7 @@ loss:
 # Optimizer
 optimizer:
   type: 'radam' # optimizer type
-  lr: 0.0005 # learning rate. if use DDP，modify  
+  lr: 0.002 # learning rate. default is 4 GPUs, modify if use different config
   weight_decay: 0 # weight decay
 
 # Schduler
@@ -82,15 +79,15 @@ scheduler:
   type: 'steplr' # scheduler type : ['steplr', 'explr', 'cosine', 'poly']
   decay_step: 
     - 100000
-  decay_gamma: 1.0
+  decay_gamma: 0.5
   
 # Trainer
 trainer:
-  num_iters: 100000 # total number of iterations for training
+  num_iters: 200000 # total number of iterations for training
 
-  val_every_n_step: 500 # valid every n steps
+  val_every_n_step: 5000 # valid every n steps
   vis_img_every_n_val: 1 # vis image results for every n validations
   vis_mesh_video_every_n_val: 5 # extract mesh and render video for every n validations
-  save_every_n_step: 5000 # save ckpt every n steps
+  save_every_n_step: 10000 # save ckpt every n steps
 
   log_freq: 50 # frequence of log

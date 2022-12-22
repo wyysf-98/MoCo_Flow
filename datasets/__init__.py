@@ -4,7 +4,6 @@ from datasets.moco_flow_dataset import MoCoFlowDataset
 def get_dataset(data_config, mode):
     if data_config['type'] == 'nof':
         return NoFDataset(data_config['root_dir'],
-                          data_config['canonical_pose'],
                           interval=data_config['interval'],
                           cache=data_config['cache'],
                           mode=mode,
@@ -15,7 +14,6 @@ def get_dataset(data_config, mode):
                                data_config['size'],
                                data_config['aabb'],
                                data_config['bkgd'],
-                               data_config['canonical_pose'],
                                interval=data_config['interval'],
                                cache=data_config['cache'],
                                mode=mode,

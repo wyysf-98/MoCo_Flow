@@ -2,11 +2,13 @@ import sys
 sys.path.append("..") 
 import os
 import os.path as osp
+import cv2
+import h5py
 import argparse
 import imageio
 import numpy as np
 from tqdm import tqdm
-from data_utils import clip_video, matting, generate_background_image, create_moco_flow_data, create_init_nerf_data
+from data_utils import clip_video, matting, generate_background_image, create_moco_flow_data, create_init_nerf_data, load_pickle_file, write_pickle_file
 
 args = argparse.ArgumentParser(description='Clip the input video and save to iamge squence.')
 args.add_argument('--input_video', required=True, type=str, help='input video path.')
@@ -48,20 +50,35 @@ def main(args):
                               masks_path = args.output_folder + '/images/mask', \
                               save_path = args.output_folder + '/background.png')
 
-    # run VIBE to get pose estimation results
-    cmd = f'cd {args.vibe_path} && \
-            python demo.py --vid_file ../{video_path} --output_folder ../{args.output_folder} --sideview --run_smplify --smooth && \
-            mv ../{args.output_folder}/video/* ../{args.output_folder}/ && \
-            rm -rf ../{args.output_folder}/video'
-    os.system(cmd)
-    
-    # convert VIBE ouput to json
+    # convert GT results
+    camera_pkl = load_pickle_file(args.input_video.replace('.mp4', '/camera.pkl'))
+    consensus_pkl = load_pickle_file(args.input_video.replace('.mp4', '/consensus.pkl'))
+    reconstructed_poses = h5py.File(args.input_video.replace('.mp4', '/reconstructed_poses.hdf5'), 'r')
+    betas, pose, transls, frame_ids = [], [], [], []
+    frame_id = 0
+    for i in tqdm(range(args.start_frame, args.end_frame, args.interval)):
+        betas += [consensus_pkl['betas']]
+        pose += [reconstructed_poses['pose'][i]]
+        transls += [reconstructed_poses['trans'][i]]
+        frame_ids += [frame_id]
+        frame_id += 1
+    betas, pose, transls, frame_ids = np.array(betas), np.array(pose), np.array(transls), np.array(frame_ids)
+    write_pickle_file(args.output_folder + '/converted.pkl', {
+        1: {
+            'frame_ids': frame_ids,
+            'betas': betas,
+            'pose': pose,
+            'transls': transls
+        }
+    })
+
+    # convert GT data to json
     H, W = imageio.imread(args.output_folder + '/images_w_bkgd/0000.png').shape[:2]
     print('H: {}, W: {}'.format(H, W))
-    create_moco_flow_data(args.output_folder + '/vibe_output.pkl', size=(H, W), focal=2000, gender='m', vis=False)
+    create_moco_flow_data(args.output_folder + '/converted.pkl', size=(H, W), focal=camera_pkl['camera_f'][0], c=camera_pkl['camera_c'], gender='m', vis=True)
 
     # create init nerf data
-    create_init_nerf_data(args.output_folder + '/vibe_output.pkl', size=(H, W), focal=2000, gender='m')
+    create_init_nerf_data(args.output_folder + '/converted.pkl', size=(H, W), focal=camera_pkl['camera_f'][0], gender='m')
 
 if __name__ == '__main__':
     main(args)
