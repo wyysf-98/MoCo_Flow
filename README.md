@@ -119,7 +119,7 @@ First, you should initialize the canonical NeRF model. This may takes ~6 hours u
             -c configs/xxx/init_nerf.yaml \
             --dist
 
-Second, for fast convergence, you should initialize the forward/backward NoF model separately. This stage can be processed simultaneously. This may takes ~6 hours using 4 GPUs.
+Second, for fast convergence, you should initialize the forward/backward NoF model separately. This stage can be processed simultaneously and may takes ~6 hours using 4 GPUs.
 
     python -m torch.distributed.launch \
             --nproc_per_node=4 train.py \
