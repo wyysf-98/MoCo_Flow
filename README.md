@@ -106,7 +106,7 @@ Then you shoud get a folder in $SAVE_PATH as following:
 
 video_vibe_result | video_vis_init_nerf_data | background image
 :-: | :-: | :-:
-<video src='assets/video_vibe_result.mp4' width=256/> | <video src='assets/video_vis_init_nerf_data.mp4' width=256/> | <image src='assets/background.png' width=256/>
+![video_vibe_result](https://wyysf-98.github.io/MoCo_Flow/assets/images/video_vibe_result_compressed.gif) | ![video_vis_init_nerf_data](https://wyysf-98.github.io/MoCo_Flow/assets/images/video_vis_init_nerf_data_compressed.gif) | ![background](https://wyysf-98.github.io/MoCo_Flow/assets/images/background.png)
 
 Finally, modify the yaml file in configs, change the `dataloader.root_dir` in init_nerf.yaml, init_nof.yaml and c2f.yaml. We provide a template in ./configures, you can check the comments in the configuration file.
 
