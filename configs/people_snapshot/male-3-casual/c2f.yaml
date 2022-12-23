@@ -16,7 +16,7 @@ dataloader:
     - [1.2, 1.2, 1.4] # AABB scale
     - [0, 0, 0] # AABB offset
   bkgd: 1.0 # customize backgound (support: float, image path, 'rand')
-  # bkgd: '../data/youtube/invisible_trap/background.png' # customize backgound (support: float, image path)
+  # bkgd: '../data/people_snapshot/male-3-casual/background.png' # customize backgound (support: float, image path)
   interval: 1 
   cache: True
   batch_size: 1

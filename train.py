@@ -3,6 +3,7 @@ import os.path as osp
 import torch
 import argparse
 import collections
+from glob import glob
 from tqdm import tqdm
 from collections import OrderedDict
 from trainer import get_trainer
@@ -17,6 +18,13 @@ def train(config):
     trainer = get_trainer(config)
     
     # load from checkpoint if provided
+    ckpts = {}
+    for ckpt in glob(f"{config['save_dir']}/{config['exp_name']}/*/ckpts/*.pth"):
+        itr = ckpt.split('_iter')[1].split('.')[0]
+        ckpts[int(itr)] = ckpt
+    ckpts = sorted(ckpts.items())
+    if len(ckpts) != 0:
+        trainer.load_ckpt(ckpts[-1][1])
     if config.resume:
         trainer.load_ckpt(config.resume)
 
@@ -29,8 +37,8 @@ def train(config):
     num_train = len(trainer.train_loader)
     num_epochs = config['trainer']['num_iters'] // (num_train * num_gpu) + 1
     train_pbar = tqdm(range(clock.step, config['trainer']['num_iters']))
-    for e in range(clock.epoch, num_epochs + 1):
-        if clock.step >= config['trainer']['num_iters']:
+    for e in range(clock.epoch, num_epochs):
+        if e == num_epochs - 1:
             trainer.visualize_batch()
             trainer.save_ckpt('final') 
             break
@@ -62,7 +70,7 @@ def train(config):
                 trainer.save_ckpt()
 
             # update learning rate
-            trainer.update_learning_rate(log_freq=config['trainer']['num_iters'] // 1000)
+            trainer.update_learning_rate(log_freq=config['trainer']['num_iters']//1000)
             
             # clock tick
             clock.tick(num_gpu)

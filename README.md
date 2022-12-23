@@ -93,7 +93,7 @@ Then you shoud get a folder in $SAVE_PATH as following:
 ```
 └── data
     └── youtube
-        └── xx
+        └── xxx
             ├── images          # images without background
             ├── images_w_bkgd   # images with background
             ├── init_nerf       # rendered images to initialize canonical NeRF
@@ -104,9 +104,9 @@ Then you shoud get a folder in $SAVE_PATH as following:
             └── vibe_output.pkl # raw VIBE output file
 ```
 
-video_vibe_result | video_vis_init_nerf_data | background image
-:-: | :-: | :-:
-<img src='assets/video_vibe_result_compressed.gif'></img> | <img src='assets/video_vis_init_nerf_data_compressed.gif'></img> | <img src='assets/background.png'></img> 
+video_vibe_result | background image
+:-: | :-:
+<img src='assets/video_vibe_result_compressed.gif'></img> | <img width="45%" src='assets/background.png'></img> 
 
 Finally, modify the yaml file in configs, change the `dataloader.root_dir` in init_nerf.yaml, init_nof.yaml and c2f.yaml. We provide a template in ./configures, you can check the comments in the configuration file.
 
@@ -114,7 +114,7 @@ Finally, modify the yaml file in configs, change the `dataloader.root_dir` in in
 ### `Train models`
 
 We use 8 GPUs (NVIDIA Tesla V100) to train the models, which takes about 2~3 days as mentioned in our paper.
-In fact, you can get reasonable results after running for two or three hours after joint training stage.
+In fact, you can get reasonable results after running for two or three hours after starting joint training stage.
 
 First, you should initialize the canonical NeRF model. This may takes ~6 hours using 4 GPUs.
 
@@ -155,6 +155,9 @@ Render the frame input (i.e., observed motion sequence).
                    --resume ./ckpts/female-3-casual/ckpts/final.pth \
                    --out_dir ./render_results/female-3-casual
 
+<img width="40%" src='assets/overfit_compressed.gif'></img> 
+
+
 Run free-viewpoint rendering on a particular frame (e.g., frame 85).
 
     python test.py -c ./ckpts/female-3-casual/config.yaml \
@@ -162,6 +165,8 @@ Run free-viewpoint rendering on a particular frame (e.g., frame 85).
                    --out_dir ./render_results/female-3-casual \
                    --render_spherical_poses \
                    --spherical_poses_frame 85
+
+<img width="40%" src='assets/frame_85_video_compressed.gif'></img> 
 
 Render the learned canonical appearance.
 
@@ -171,6 +176,7 @@ Render the learned canonical appearance.
                    --render_spherical_poses \
                    --spherical_poses_frame -1
     
+<img width="40%" src='assets/canonical_video_compressed.gif'></img> 
 
 ## Acknowledgement
 
