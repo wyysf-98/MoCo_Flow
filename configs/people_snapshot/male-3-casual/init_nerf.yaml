@@ -71,7 +71,7 @@ loss:
 # Optimizer
 optimizer:
   type: 'radam' # optimizer type
-  lr: 0.002 # learning rate. default is 4 GPUs, modify if use different config
+  lr: 0.001 # learning rate. default is 4 GPUs, modify if use different config
   weight_decay: 0 # weight decay
 
 # Schduler

@@ -134,14 +134,14 @@ optimizer:
 scheduler:
   type: 'steplr' # scheduler type : ['steplr', 'explr', 'cosine', 'poly']
   decay_step: 
-    - 2050000
+    - 1050000
   decay_gamma: 0.5
   
 # Trainer
 trainer:
   num_iters: 2200000 # total number of iterations for training
   coarse2fine_start_iter: 5000
-  coarse2fine_end_iter: 2005000
+  coarse2fine_end_iter: 1005000
   
   val_every_n_step: 20000 # valid every n steps
   vis_img_every_n_val: 1 # vis image results for every n validations

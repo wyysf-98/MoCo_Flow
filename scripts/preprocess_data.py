@@ -14,6 +14,7 @@ args.add_argument('--output_folder', required=True, type=str, help='input video 
 args.add_argument('--start_frame', default=0, type=int, help='clip start frame index.')
 args.add_argument('--end_frame', default=-1, type=int, help='clip end frame index.')
 args.add_argument('--interval', default=1, type=int, help='sampling interval of the video.')
+args.add_argument('--thres', default=128, type=int, help='threshold for matting.')
 args.add_argument('--vibe_path', default='./VIBE', type=str, help='vibe code path for pose estimation.')
 args.add_argument('--grender', default='neutral', type=str, help='gender for smpl model.')
 
@@ -41,7 +42,7 @@ def main(args):
     imageio.mimsave(video_path, frames, fps=30)
 
     # matting
-    matting(args.output_folder + '/images_w_bkgd', args.output_folder + '/images')
+    matting(args.output_folder + '/images_w_bkgd', args.output_folder + '/images', thres=args.thres)
 
     # generate the background image
     generate_background_image(images_path = args.output_folder + '/images_w_bkgd', \

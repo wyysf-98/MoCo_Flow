@@ -33,10 +33,10 @@ class BaseTrainer(object):
         # init distribute training or single gpu training
         self.init_dist(config)
 
-        # init local txt logger and tensorboard or comet logger
-        self.init_logger(config)
-
         if self.mode == 'train':
+            # init local txt logger and tensorboard or comet logger
+            self.init_logger(config)
+
             # get dataloader
             self.prepare_dataloader(config['dataloader'])
 
@@ -97,6 +97,7 @@ class BaseTrainer(object):
         self.gpu = config.gpu_id
         self.is_master = config.is_master
         self.local_rank = config.local_rank
+        self.world_size = 1
         self.device = torch.device('cuda:%s'%self.gpu)
         torch.cuda.set_device(self.device)
     
@@ -223,8 +224,9 @@ class BaseTrainer(object):
     def record_str(self, str_recorded):
         """record string in master process"""
         print(str_recorded)
-        self.logger.put_line(
-            '[Epoch/Step : {}/{}]: {}'.format(self.clock.epoch, self.clock.step, str_recorded))
+        if self.mode == 'train':
+            self.logger.put_line(
+                '[Epoch/Step : {}/{}]: {}'.format(self.clock.epoch, self.clock.step, str_recorded))
 
     def train_func(self, data):
         """training function"""

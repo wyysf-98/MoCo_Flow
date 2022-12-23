@@ -581,7 +581,7 @@ class MoCoFlowTrainer(BaseTrainer):
 
 
     @ torch.no_grad()
-    def visualize_video(self, save_path=None):
+    def visualize_video(self, vis_novel_view=True, save_path=None):
         img_size = self.val_dataset.size
 
         self.record_str(f'strat rendering video...')
@@ -603,12 +603,12 @@ class MoCoFlowTrainer(BaseTrainer):
             results = self.render(rays, background, rays_msk=rays_msk, use_nof=True, test_time=True)
             _, img_pred, _, depth_pred = self.decode_results(results, img_size)
             img_pred, depth_pred = img_pred.cpu(), depth_pred.cpu()
-            # render novel view image
-            novel_results = self.render(rays_novel, torch.ones_like(background), rays_msk=rays_msk_novel, use_nof=True, test_time=True)
-            _, novel_img_pred, _, novel_depth_pred = self.decode_results(novel_results, img_size)
-            novel_img_pred, novel_depth_pred = novel_img_pred.cpu(), novel_depth_pred.cpu()
-
-            stack = torch.cat([img_gt, img_pred, depth_pred, novel_img_pred, novel_depth_pred], dim=-1) # (3, H, W*5)
+            stack = torch.cat([img_gt, img_pred, depth_pred], dim=-1) # (3, H, W*5)
+            if vis_novel_view: # render novel view image
+                novel_results = self.render(rays_novel, torch.ones_like(background), rays_msk=rays_msk_novel, use_nof=True, test_time=True)
+                _, novel_img_pred, _, novel_depth_pred = self.decode_results(novel_results, img_size)
+                novel_img_pred, novel_depth_pred = novel_img_pred.cpu(), novel_depth_pred.cpu()
+                stack = torch.cat([stack, novel_img_pred, novel_depth_pred], dim=-1) # (3, H, W*5)
             cur_img_path = osp.join(video_img_save_path, f"{frame_idx:04d}.png")
             vutils.save_image(stack, cur_img_path)
             vis_out.append(imageio.imread(cur_img_path))
@@ -617,7 +617,7 @@ class MoCoFlowTrainer(BaseTrainer):
 
 
     @ torch.no_grad()
-    def visualize_frame(self, frame_idx, save_path=None, save_tb=False):
+    def visualize_frame(self, frame_idx, vis_novel_view=True, save_path=None, save_tb=False):
         img_size = self.val_dataset.size
 
         if save_path is None:
@@ -637,18 +637,18 @@ class MoCoFlowTrainer(BaseTrainer):
         results = self.render(rays, background, rays_msk=rays_msk, use_nof=(frame_idx!=-1), test_time=True)
         _, img_pred, _, depth_pred = self.decode_results(results, img_size)
         img_pred, depth_pred = img_pred.cpu(), depth_pred.cpu()
-        # render novel view image
-        novel_results = self.render(rays_novel, torch.ones_like(background), rays_msk=rays_msk_novel, use_nof=(frame_idx!=-1), test_time=True)
-        _, novel_img_pred, _, novel_depth_pred = self.decode_results(novel_results, img_size)
-        novel_img_pred, novel_depth_pred = novel_img_pred.cpu(), novel_depth_pred.cpu()
-
-        stack = torch.cat([img_gt, img_pred, depth_pred, novel_img_pred, novel_depth_pred], dim=-1) # (3, H, W*5)
+        stack = torch.cat([img_gt, img_pred, depth_pred], dim=-1) # (3, H, W*5)
+        if vis_novel_view: # render novel view image
+            novel_results = self.render(rays_novel, torch.ones_like(background), rays_msk=rays_msk_novel, use_nof=(frame_idx!=-1), test_time=True)
+            _, novel_img_pred, _, novel_depth_pred = self.decode_results(novel_results, img_size)
+            novel_img_pred, novel_depth_pred = novel_img_pred.cpu(), novel_depth_pred.cpu()
+            stack = torch.cat([stack, novel_img_pred, novel_depth_pred], dim=-1) # (3, H, W*5)
         vutils.save_image(stack, img_save_path)
 
         if save_tb and self.is_master:
             self.tb.add_image(os.path.basename(img_save_name), stack, global_step=self.clock.step)
             
-        return img_pred, depth_pred, novel_img_pred, novel_depth_pred
+        return stack
 
 
     def visualize_batch(self, save_path=None):

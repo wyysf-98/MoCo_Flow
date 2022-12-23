@@ -23,7 +23,7 @@ This is an official implementation. Any questions or discussions are welcomed!
 | [ TAVA ]( https://arxiv.org/pdf/2206.08929.pdf )        | :heavy_check_mark: |    :heavy_check_mark:    | :heavy_check_mark: |      Forward      |
 | Ours(MoCo-Flow)                                         | :heavy_check_mark: |            :x:           | :heavy_check_mark: |  Inverse+Forward  |
 
-* Our work is placed to *strict monocular*, which can be seen in [Monocular Dynamic View Synthesis A Reality Check](https://arxiv.org/pdf/2210.13445.pdf).
+* Our work is placed to *strict monocular*, more details can be seen in [Monocular Dynamic View Synthesis A Reality Check](https://arxiv.org/pdf/2210.13445.pdf).
 
 ![Monocular](https://wyysf-98.github.io/MoCo_Flow/assets/images/spectrum.gif)
 
@@ -75,7 +75,7 @@ First, get a video and place into a folder, such as **data/youtube/videos/xxx.mp
 Second, run the data preprocessing script.
 
     VIDEO_PATH='../data/youtube/videos/xxx.mp4'            # input video path
-    SAVE_PATH='../data/youtube/xxxx'                       # output folder 
+    SAVE_PATH='../data/youtube/xxx'                        # output folder 
     START_FRAME=2295                                       # start frame of the video
     END_FRAME=2415                                         # end frame of the video
     INTERVAL=1                                             # sampling interval
@@ -93,7 +93,7 @@ Then you shoud get a folder in $SAVE_PATH as following:
 ```
 └── data
     └── youtube
-        └── invisible_trap
+        └── xx
             ├── images          # images without background
             ├── images_w_bkgd   # images with background
             ├── init_nerf       # rendered images to initialize canonical NeRF
@@ -104,14 +104,17 @@ Then you shoud get a folder in $SAVE_PATH as following:
             └── vibe_output.pkl # raw VIBE output file
 ```
 
+video_vibe_result | video_vis_init_nerf_data | background image
+:-: | :-: | :-:
+<video src='assets/video_vibe_result.mp4' width=256/> | <video src='assets/video_vis_init_nerf_data.mp4' width=256/> | <image src='assets/background.png' width=256/>
 
-Finally, modify the yaml file in configs, change the `dataloader.root_dir` in init_nerf.yaml, init_nof.yaml and c2f.yaml. You can check the comments in the configuration file.
+Finally, modify the yaml file in configs, change the `dataloader.root_dir` in init_nerf.yaml, init_nof.yaml and c2f.yaml. We provide a template in ./configures, you can check the comments in the configuration file.
 
 
 ### `Train models`
 
 We use 8 GPUs (NVIDIA Tesla V100) to train the models, which takes about 2~3 days as mentioned in our paper.
-And we will provide the pre-trained model ASAP.
+In fact, you can get reasonable results after running for two or three hours after joint training stage.
 
 First, you should initialize the canonical NeRF model. This may takes ~6 hours using 4 GPUs.
 
@@ -142,14 +145,32 @@ Or, for sanity check, you can use:
 
 ### `Render output`
 
+We provide some of the pre-trained model in [link](https://1drv.ms/u/s!AuxALCooalaxoQkGJT1iJyc0Lax2?e=BAZuUo).
+(Due to privacy issue, we only provide the pre-trained models of people-snapshot.)
+Please place the folder downloaded to ./ckpts.
+
 Render the frame input (i.e., observed motion sequence).
 
-Run free-viewpoint rendering on a particular frame (e.g., frame 100).
+    python test.py -c ./ckpts/female-3-casual/config.yaml \
+                   --resume ./ckpts/female-3-casual/ckpts/final.pth \
+                   --out_dir ./render_results/female-3-casual
+
+Run free-viewpoint rendering on a particular frame (e.g., frame 85).
+
+    python test.py -c ./ckpts/female-3-casual/config.yaml \
+                   --resume ./ckpts/female-3-casual/ckpts/final.pth \
+                   --out_dir ./render_results/female-3-casual \
+                   --render_spherical_poses \
+                   --spherical_poses_frame 85
 
 Render the learned canonical appearance.
 
-<!-- In addition, you can find the rendering scripts in `scripts/render_results.py`. -->
-
+    python test.py -c ./ckpts/female-3-casual/config.yaml \
+                   --resume ./ckpts/female-3-casual/ckpts/final.pth \
+                   --out_dir ./render_results/female-3-casual \
+                   --render_spherical_poses \
+                   --spherical_poses_frame -1
+    
 
 ## Acknowledgement
 

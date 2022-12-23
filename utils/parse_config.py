@@ -128,7 +128,7 @@ def _save_codes(save_path):
     """
     cur_codes_path = osp.dirname(osp.dirname(os.path.abspath(__file__)))
     shutil.copytree(cur_codes_path, save_path, \
-        ignore=shutil.ignore_patterns('data', 'outputs', 'exps', 'docker', 'log', 'scripts', '*.txt', '*.png', '*.gif', '*.pkl'))
+        ignore=shutil.ignore_patterns('data', 'outputs', 'exps', 'docker', 'log', 'scripts', '*.txt', '*.png', '*.pkl'))
 
 
 def _remove_punctuation(text):
@@ -154,17 +154,4 @@ def _merge_config(base_config, user_config):
         else:
             merged_dict[k] = _merge_config(base_config[k], user_config[k])
     return merged_dict
-
-
-def _update_config(config, modification=None):
-    """
-    helper functions to update config dict with custom cli options
-    """
-    if modification is None:
-        return config
-
-    for k, v in modification.items():
-        if v is not None:
-            _set_by_path(config, k, v)
-    return config
 
