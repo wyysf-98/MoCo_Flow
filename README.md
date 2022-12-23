@@ -97,7 +97,7 @@ Then you shoud get a folder in $SAVE_PATH as following:
             ├── images          # images without background
             ├── images_w_bkgd   # images with background
             ├── init_nerf       # rendered images to initialize canonical NeRF
-            ├── background.png  # static background image, a trick to prevent imperfect matting
+            ├── background.png  # static background image, a trick to handle imperfect matting (deprecated)
             ├── train.json      # annotated file
             ├── val.json        # annotated file
             ├── xxx.mp4         # rendered video for pose estimation
@@ -106,7 +106,7 @@ Then you shoud get a folder in $SAVE_PATH as following:
 
 video_vibe_result | video_vis_init_nerf_data | background image
 :-: | :-: | :-:
-![video_vibe_result](https://wyysf-98.github.io/MoCo_Flow/assets/images/video_vibe_result_compressed.gif) | ![video_vis_init_nerf_data](https://wyysf-98.github.io/MoCo_Flow/assets/images/video_vis_init_nerf_data_compressed.gif) | ![background](https://wyysf-98.github.io/MoCo_Flow/assets/images/background.png)
+<img src='assets/video_vibe_result_compressed.gif'></img> | <img src='assets/video_vis_init_nerf_data_compressed.gif'></img> | <img src='assets/background.png'></img> 
 
 Finally, modify the yaml file in configs, change the `dataloader.root_dir` in init_nerf.yaml, init_nof.yaml and c2f.yaml. We provide a template in ./configures, you can check the comments in the configuration file.
 
