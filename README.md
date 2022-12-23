@@ -155,7 +155,7 @@ Render the frame input (i.e., observed motion sequence).
                    --resume ./ckpts/female-3-casual/ckpts/final.pth \
                    --out_dir ./render_results/female-3-casual
 
-<img width="40%" src='assets/overfit_compressed.gif'></img> 
+<img width="60%" src='assets/overfit_compressed.gif'></img> 
 
 
 Run free-viewpoint rendering on a particular frame (e.g., frame 85).
@@ -166,7 +166,7 @@ Run free-viewpoint rendering on a particular frame (e.g., frame 85).
                    --render_spherical_poses \
                    --spherical_poses_frame 85
 
-<img width="40%" src='assets/frame_85_video_compressed.gif'></img> 
+<img width="60%" src='assets/frame_85_video_compressed.gif'></img> 
 
 Render the learned canonical appearance.
 
