@@ -10,7 +10,8 @@ This is an official implementation. Any questions or discussions are welcomed!
 
 ## Note
 * Our main contribution is to propose an easy and general solution to constrain the dynamic motion flow.
-* We treat all the data are in-the-wild in the main paper and only use a video without any annotated data.
+* Our method can produce smooth motion and rendering results even if the pose estimation is jitter and inaccurate.
+* We treat all the data are in-the-wild in the main paper and only use a video without other annotated data.
 * Following the [TAVA](https://arxiv.org/pdf/2206.08929.pdf), we show the design differences of different dynamic NeRFs.
 
 | Methods                                                 | Template-free      | No Per-frame Latent Code | 3D Canonical       | Space Deformation |
@@ -27,6 +28,10 @@ This is an official implementation. Any questions or discussions are welcomed!
 
 ![Monocular](https://wyysf-98.github.io/MoCo_Flow/assets/images/spectrum.gif)
 
+### Limitations and Future Work
+* Our approach is based on the naive NeRF, therefore, a long training time (2~3 days) is required, which can be improved using [Instant-ngp](https://github.com/NVlabs/instant-ngp) as in [InstantAvatar](https://tijiang13.github.io/InstantAvatar/#)
+* We do *not* assume the hard surface of the human, although a background loss is used for optimization, some minor density artifacts in background can be found in depth images. Using *Hard Surface Regularization* proposed by [LOLNeRF](https://arxiv.org/pdf/2111.09996.pdf) may tackle this.
+* The accurate masks are *not* used for sampling in our work, better visual quality can be achieved by using a finer sampling strategy.
 
 ## Prerequisite
 
