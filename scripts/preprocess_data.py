@@ -51,7 +51,7 @@ def main(args):
 
     # run VIBE to get pose estimation results
     cmd = f'cd {args.vibe_path} && \
-            python demo.py --vid_file ../{video_path} --output_folder ../{args.output_folder} --sideview --run_smplify --smooth && \
+            python demo.py --vid_file ../{video_path} --output_folder ../{args.output_folder} --sideview && \
             mv ../{args.output_folder}/video/* ../{args.output_folder}/ && \
             rm -rf ../{args.output_folder}/video'
     os.system(cmd)
