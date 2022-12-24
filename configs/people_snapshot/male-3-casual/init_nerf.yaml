@@ -28,7 +28,7 @@ model:
 
   N_rand: 5120 # number of random rays per gradient step per GPU
   chunk: 32768 # number of random rays sampled per image, used in val mode
-  N_samples: 64 # number of coarse samples
+  N_samples: 128 # number of coarse samples
   N_importance: 128 # number of additional fine samples
   use_disp: False # use disparity depth sampling
   perturb: 1.0 # factor to perturb depth sampling points
