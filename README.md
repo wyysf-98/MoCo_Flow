@@ -32,6 +32,7 @@ This is an official implementation. Any questions or discussions are welcomed!
 * Our approach is based on the naive NeRF, therefore, a long training time (2~3 days) is required, which can be improved using [Instant-ngp](https://github.com/NVlabs/instant-ngp) as in [InstantAvatar](https://tijiang13.github.io/InstantAvatar/#).
 * We do *not* assume the hard surface of the human, although a background loss is used for optimization, some minor density artifacts in background can be found in depth images. Using *Hard Surface Regularization* proposed by [LOLNeRF](https://arxiv.org/pdf/2111.09996.pdf) may tackle this.
 * The accurate masks are *not* used for sampling in our work, better visual quality can be achieved by using a finer sampling strategy.
+* Our template-free method has difficulty handling very complex motions such as entangled feet, partly due to the wrong pose estimation, and may produce incorrect results and artifacts.
 
 ## Prerequisite
 
@@ -150,7 +151,7 @@ Or, for sanity check, you can use:
 
 ### `Render output`
 
-We provide some of the pre-trained model in [link](https://1drv.ms/u/s!AuxALCooalaxoQkGJT1iJyc0Lax2?e=BAZuUo).
+We provide some of the pre-trained model in [link](https://drive.google.com/drive/folders/1G90FtC7EbcSCRn40eNtR07vAQXfMK7tK?usp=share_link).
 (Due to privacy issue, we only provide the pre-trained models of people-snapshot.)
 Please place the folder downloaded to ./ckpts.
 

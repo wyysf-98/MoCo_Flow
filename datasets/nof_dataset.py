@@ -43,7 +43,7 @@ class NoFDataset(Dataset):
         # get SMPL model
         self.smpl_gpu = SMPL(self.meta['gender'])
 
-    def get_frame_correspondence(self, src_frame, tgt_frame=0, num_sampled=10000, thickness=0.2, device=torch.device('cpu')):
+    def get_frame_correspondence(self, src_frame, tgt_frame=0, num_sampled=10000, thickness=0.1, device=torch.device('cpu')):
         self.smpl_gpu.to(device)
         src_frame_info = self.meta['frames'][src_frame]
         tgt_frame_info = self.meta['frames'][tgt_frame]
