@@ -187,7 +187,6 @@ Extract the learned mesh on a particular frame (e.g., frame 75).
                    --out_dir ./render_results/male-3-casual \
                    --extract_mesh \
                    --mesh_frame 75
-                   # --render_gt # Uncomment if you want to visualize GT images
     
 
 Render the learned canonical appearance.
