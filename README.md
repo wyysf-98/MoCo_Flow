@@ -76,15 +76,15 @@ Install the required packages.
 
 ** To get the best result, we highly recommend a video clip that meets the similar requirements like [Human-NeRF](https://github.com/chungyiweng/humannerf):
 
-First, get a video and place into a folder, such as **data/youtube/videos/xxx.mp4**. 
+First, get a video and place into a folder, such as **data/people-snapshot/videos/xxx.mp4**. 
 
 Second, run the data preprocessing script.
 
-    VIDEO_PATH='../data/youtube/videos/xxx.mp4'            # input video path
-    SAVE_PATH='../data/youtube/xxx'                        # output folder 
-    START_FRAME=2295                                       # start frame of the video
-    END_FRAME=2415                                         # end frame of the video
-    INTERVAL=1                                             # sampling interval
+    VIDEO_PATH='../data/people-snapshot/videos/xxx.mp4'    # input video path
+    SAVE_PATH='../data/people-snapshot/xxx'                # output folder 
+    START_FRAME=0                                          # start frame of the video
+    END_FRAME=320                                          # end frame of the video
+    INTERVAL=2                                             # sampling interval
 
     cd scripts
     python preprocess_data.py --input_video $VIDEO_PATH \
@@ -98,7 +98,7 @@ Then you shoud get a folder in $SAVE_PATH as following:
 
 ```
 └── data
-    └── youtube
+    └── people-snapshot
         └── xxx
             ├── images          # images without background
             ├── images_w_bkgd   # images with background
@@ -157,33 +157,59 @@ Please place the folder downloaded to ./ckpts.
 
 Render the frame input (i.e., observed motion sequence).
 
-    python test.py -c ./ckpts/female-3-casual/config.yaml \
-                   --resume ./ckpts/female-3-casual/ckpts/final.pth \
-                   --out_dir ./render_results/female-3-casual
+    python test.py -c ./ckpts/male-3-casual/config.yaml \
+                   --resume ./ckpts/male-3-casual/ckpts/final.pth \
+                   --test_json ./ckpts/male-3-casual/val.json \
+                   --out_dir ./render_results/male-3-casual \
+                   --render_training_poses \
+                   # --render_gt # Uncomment if you want to visualize GT images
 
 <img width="60%" src='assets/overfit_compressed.gif'></img> 
 
 
-Run free-viewpoint rendering on a particular frame (e.g., frame 85).
+Run free-viewpoint rendering on a particular frame (e.g., frame 75).
 
-    python test.py -c ./ckpts/female-3-casual/config.yaml \
-                   --resume ./ckpts/female-3-casual/ckpts/final.pth \
-                   --out_dir ./render_results/female-3-casual \
+    python test.py -c ./ckpts/male-3-casual/config.yaml \
+                   --resume ./ckpts/male-3-casual/ckpts/final.pth \
+                   --test_json ./ckpts/male-3-casual/val.json \
+                   --out_dir ./render_results/male-3-casual \
                    --render_spherical_poses \
-                   --spherical_poses_frame 85
+                   --spherical_poses_frame 75 \
+                   # --render_gt # Uncomment if you want to visualize GT images
 
-<img width="60%" src='assets/frame_85_video_compressed.gif'></img> 
+<img width="60%" src='assets/frame_75_video_compressed.gif'></img> 
+
+Extract the learned mesh on a particular frame (e.g., frame 75).
+
+    python test.py -c ./ckpts/male-3-casual/config.yaml \
+                   --resume ./ckpts/male-3-casual/ckpts/final.pth \
+                   --test_json ./ckpts/male-3-casual/val.json \
+                   --out_dir ./render_results/male-3-casual \
+                   --extract_mesh \
+                   --mesh_frame 75
+                   # --render_gt # Uncomment if you want to visualize GT images
+    
 
 Render the learned canonical appearance.
 
-    python test.py -c ./ckpts/female-3-casual/config.yaml \
-                   --resume ./ckpts/female-3-casual/ckpts/final.pth \
-                   --out_dir ./render_results/female-3-casual \
+    python test.py -c ./ckpts/male-3-casual/config.yaml \
+                   --resume ./ckpts/male-3-casual/ckpts/final.pth \
+                   --test_json ./ckpts/male-3-casual/val.json \
+                   --out_dir ./render_results/male-3-casual \
                    --render_spherical_poses \
                    --spherical_poses_frame -1
     
-<img width="40%" src='assets/canonical_video_compressed.gif'></img> 
+<img width="30%" src='assets/canonical_video_compressed.gif'></img> 
 
+Extract the learned canonical mesh.
+
+    python test.py -c ./ckpts/male-3-casual/config.yaml \
+                   --resume ./ckpts/male-3-casual/ckpts/final.pth \
+                   --test_json ./ckpts/male-3-casual/val.json \
+                   --out_dir ./render_results/male-3-casual \
+                   --extract_mesh \
+                   --mesh_frame -1
+    
 ## Acknowledgement
 
 The implementation partly took reference from [nerf_pl](https://github.com/kwea123/nerf_pl). We thank the authors for their generosity to release code.

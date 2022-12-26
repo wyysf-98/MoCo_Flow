@@ -21,15 +21,16 @@ from utils.vis_utils import visualize_depth
 
 class MoCoFlowTrainer(BaseTrainer):
     def prepare_dataloader(self, data_config):
-        self.train_dataset = get_dataset(data_config, 'train')
-        self.train_sampler = DistributedSampler(self.train_dataset) if self.dist else None
-        self.train_loader = DataLoader(self.train_dataset,
-                                       batch_size=data_config['batch_size'],
-                                       num_workers=data_config['workers'],
-                                       sampler=self.train_sampler,
-                                       shuffle=False,
-                                       pin_memory=True)
-        self.num_frames = self.train_dataset.num_frames
+        if self.mode == 'train':
+            self.train_dataset = get_dataset(data_config, 'train')
+            self.train_sampler = DistributedSampler(self.train_dataset) if self.dist else None
+            self.train_loader = DataLoader(self.train_dataset,
+                                        batch_size=data_config['batch_size'],
+                                        num_workers=data_config['workers'],
+                                        sampler=self.train_sampler,
+                                        shuffle=False,
+                                        pin_memory=True)
+            self.num_frames = self.train_dataset.num_frames
 
         data_config['size'] = data_config['val_size']
         self.val_dataset = get_dataset(data_config, 'val')
@@ -535,10 +536,11 @@ class MoCoFlowTrainer(BaseTrainer):
         triangles[:, [0, 1, 2]] = triangles[:,[0, 2, 1]]
         vertices = vertices / N_grid * 3.0 - 1.5
         if save_path is None:
-            save_path = osp.join(
-                self.log_dir, 'mesh_epoch_{}_step_{}/{}.obj'.format(\
-                self.clock.epoch, self.clock.step, frame_idx if frame_idx != -1 else 'canonical'))
-            os.makedirs(os.path.dirname(save_path), exist_ok=True)
+            save_path = self.log_dir
+        save_path = osp.join(
+            save_path, 'mesh_epoch_{}_step_{}/{}.obj'.format(\
+            self.clock.epoch, self.clock.step, frame_idx if frame_idx != -1 else 'canonical'))
+        os.makedirs(os.path.dirname(save_path), exist_ok=True)
         mcubes.export_obj(vertices, triangles, save_path)
 
         if save_tb and self.is_master:
@@ -569,8 +571,11 @@ class MoCoFlowTrainer(BaseTrainer):
             img_pred, depth_pred = img_pred.cpu(), depth_pred.cpu()
 
             if frame_idx != -1:
-                img_gt = vis_data['rgbs'].view(img_size[0], img_size[1], 3).permute(2, 0, 1)
-                stack = torch.stack([img_gt, img_pred, depth_pred]) # (3, 3, H, W)
+                if 'rgbs' in vis_data.keys():
+                    img_gt = vis_data['rgbs'].view(img_size[0], img_size[1], 3).permute(2, 0, 1)
+                    stack = torch.stack([img_gt, img_pred, depth_pred]) # (3, 3, H, W)
+                else:
+                    stack = torch.stack([img_pred, depth_pred]) # (3, 3, H, W)
             else:
                 stack = torch.stack([img_pred, depth_pred]) # (2, 3, H, W)
             cur_img_path = osp.join(video_img_save_path, f"{i:04d}.png")
@@ -595,15 +600,19 @@ class MoCoFlowTrainer(BaseTrainer):
         for frame_idx in tqdm(range(self.num_frames)):
             # get data
             vis_data = self.val_dataset[frame_idx]
-            rays, rays_msk, rays_novel, rays_msk_novel, rgbs, background = \
-                vis_data['rays'], vis_data['rays_msk'], vis_data['rays_novel'], vis_data['rays_msk_novel'], vis_data['rgbs'], vis_data['background']
-            img_gt = rgbs.view(img_size[0], img_size[1], 3).permute(2, 0, 1).cpu() # (3, H, W)
+            rays, rays_msk, rays_novel, rays_msk_novel, background = \
+                vis_data['rays'], vis_data['rays_msk'], vis_data['rays_novel'], vis_data['rays_msk_novel'], vis_data['background']
 
             # render overfit image
             results = self.render(rays, background, rays_msk=rays_msk, use_nof=True, test_time=True)
             _, img_pred, _, depth_pred = self.decode_results(results, img_size)
             img_pred, depth_pred = img_pred.cpu(), depth_pred.cpu()
-            stack = torch.cat([img_gt, img_pred, depth_pred], dim=-1) # (3, H, W*5)
+
+            if 'rgbs' in vis_data.keys():
+                img_gt = vis_data['rgbs'].view(img_size[0], img_size[1], 3).permute(2, 0, 1).cpu() # (3, H, W)
+                stack = torch.cat([img_gt, img_pred, depth_pred], dim=-1) # (3, H, W*3)
+            else:
+                stack = torch.cat([img_pred, depth_pred], dim=-1) # (3, H, W*2)
             if vis_novel_view: # render novel view image
                 novel_results = self.render(rays_novel, torch.ones_like(background), rays_msk=rays_msk_novel, use_nof=True, test_time=True)
                 _, novel_img_pred, _, novel_depth_pred = self.decode_results(novel_results, img_size)

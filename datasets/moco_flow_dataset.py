@@ -164,17 +164,15 @@ class MoCoFlowDataset(Dataset):
 
         sample['idx'] = idx
         img_path = osp.join(self.root_dir, self.imgs_dir, self.meta['frames'][idx]['file_path'])
-        sample['image_path'] = img_path
-        img = self.transform(Image.open(img_path)) # (3|4, H, W)
-        if img.shape[0] == 4:
-            # print('image with alpha channel, use custimized background')
-            if self.bkgd == 'rand':
-                if self.mode == 'val':
-                    self.bkgd_img = torch.ones((3, *self.size))
-                else:
+        if osp.exists(img_path):
+            sample['image_path'] = img_path
+            img = self.transform(Image.open(img_path)) # (3|4, H, W)
+            if img.shape[0] == 4:
+                # print('image with alpha channel, use custimized background')
+                if self.bkgd == 'rand':
                     self.bkgd_img = torch.rand(3, 1, 1).repeat(1, *self.size)
-            img = img[:3, ...] * img[-1:, ...] + self.bkgd_img * (1 - img[-1:, ...])
-        sample['rgbs'] = img.view(3, -1).permute(1, 0) # (H*W, 3) RGB
+                img = img[:3, ...] * img[-1:, ...] + self.bkgd_img * (1 - img[-1:, ...])
+            sample['rgbs'] = img.view(3, -1).permute(1, 0) # (H*W, 3) RGB
         sample['background'] = self.bkgd_img.view(3, -1).permute(1, 0) # (H*W, 3) RGB
 
         # print(img.shape)
