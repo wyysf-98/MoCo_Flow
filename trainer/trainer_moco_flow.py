@@ -30,7 +30,6 @@ class MoCoFlowTrainer(BaseTrainer):
                                         sampler=self.train_sampler,
                                         shuffle=False,
                                         pin_memory=True)
-            self.num_frames = self.train_dataset.num_frames
 
         data_config['size'] = data_config['val_size']
         self.val_dataset = get_dataset(data_config, 'val')
@@ -41,6 +40,8 @@ class MoCoFlowTrainer(BaseTrainer):
                                      pin_memory=True)
 
         self.spherical_dataset = get_dataset(data_config, 'val/spherical_path')
+
+        self.num_frames = self.train_dataset.num_frames if self.mode == 'train' else self.val_dataset.num_frames
 
     def load_pretrained_model(self, model, model_name, pretrained_path):
         try:
